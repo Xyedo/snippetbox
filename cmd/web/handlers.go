@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/xyedo/snippetbox/pkg/forms"
 	"github.com/xyedo/snippetbox/pkg/models"
 )
 
@@ -23,7 +24,7 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) showSnippet(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+	id, err := strconv.Atoi(r.URL.Query().Get(":id"))
 	if err != nil || id < 1 {
 		app.notFound(w)
 		return
@@ -38,31 +39,34 @@ func (app *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 	}
 	app.render(w, r, "show.page.tmpl", &templateData{Snippet: snippet})
 }
-func (app *application) createSnippetHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "POST":
-		createSnippet(app, w, r)
-	case "GET":
-		createSnippetForm(app, w, r)
-	default:
-		w.Header().Set("Allow", "POST,GET")
-		app.clientError(w, http.StatusMethodNotAllowed)
-	}
 
+func (app *application) createSnippetForm(w http.ResponseWriter, r *http.Request) {
+	app.render(w, r, "create.page.tmpl", &templateData{
+		Form: forms.New(nil),
+	})
 }
-
-func createSnippetForm(app *application, w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Create a new snippet..."))
-}
-func createSnippet(app *application, w http.ResponseWriter, r *http.Request) {
-	title := "O snail"
-	content := "O snail\nClimb Mount Fuji,\nBut Slowly, slowly!\n\n -Kobayashi Issa"
-	expires := "7"
-	id, err := app.snippets.Insert(title, content, expires)
+func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
 	if err != nil {
 		app.serverError(w, err)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/snippet?id=%d", id), http.StatusSeeOther)
+	form := forms.New(r.PostForm)
+	form.Required("title", "content", "expires")
+	form.MaxLength("title", 100)
+	form.PermittedValues("expires", "1", "7", "365")
+
+	if !form.Valid() {
+		app.render(w, r, "create.page.tmpl", &templateData{
+			Form: form,
+		})
+		return
+	}
+	id, err := app.snippets.Insert(form.Get("title"), form.Get("title"), form.Get("expires"))
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+	http.Redirect(w, r, fmt.Sprintf("/snippet/%d", id), http.StatusSeeOther)
 
 }
