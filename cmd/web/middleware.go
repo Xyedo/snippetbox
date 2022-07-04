@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/justinas/nosurf"
 )
 
 func secureHeaders(next http.Handler) http.Handler {
@@ -34,6 +36,15 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+func (app *application) requireAuthUser(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if app.authenticatedUser(r) == 0 {
+			http.Redirect(w, r, "/user/login", http.StatusSeeOther)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 type loggingResponseWriter struct {
 	http.ResponseWriter
@@ -44,4 +55,13 @@ func NewLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
 	// WriteHeader(int) is not called if our response implicitly returns 200 OK, so
 	// we default to that status code.
 	return &loggingResponseWriter{w, http.StatusOK}
+}
+func NoSurf(next http.Handler) http.Handler {
+	csrfHandler := nosurf.New(next)
+	csrfHandler.SetBaseCookie(http.Cookie{
+		HttpOnly: true,
+		Path:     "/",
+		Secure:   true,
+	})
+	return csrfHandler
 }
