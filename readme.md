@@ -4,4 +4,18 @@
 <li>Added Response Time & status, kinda like morgan in express</li>
 <li>Will not Change Middleware to compossable middleware like express because go middleware doesnt behave like express</li>
 </ul>
-<h2>Still on Progress - Chapter 13 - Testing<h2>
+<h2>Finished - What I Learn<h2>
+<ul>
+<li>Best Practices building web app using go</li>
+<li>using std package like http, flag, context, httptest, and many more</li>
+<li>unit testing, mocking and end-to-end testing, integration testing in GO </li>
+</ul>
+<h2>TODO List Exercises </h2>
+- [x] Add About Page to the App
+- [x] Add a debug mode
+- [x] more http e2e testing
+- [x] add Account page to the app
+- [x] Redirect appropriately after login
+- [ ] Implement Change Password Features
+
+

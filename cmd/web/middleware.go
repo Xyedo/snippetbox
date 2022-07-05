@@ -7,13 +7,16 @@ import (
 	"time"
 
 	"github.com/justinas/nosurf"
-	"github.com/xyedo/snippetbox/pkg/models"
 )
 
 func secureHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-XSS-Protection", "1; mode=block")
+		w.Header().Set("Content-Security-Policy",
+			"default-src 'self'; style-src 'self' fonts.googleapis.com; font-src fonts.gstatic.com")
+		w.Header().Set("Referrer-Policy", "origin-when-cross-origin")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "deny")
+		w.Header().Set("X-XSS-Protection", "0")
 
 		next.ServeHTTP(w, r)
 	})
@@ -38,34 +41,42 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-func (app *application) requireAuthUser(next http.Handler) http.Handler {
+func (app *application) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if app.authenticatedUser(r) == nil {
+		if !app.isAuthenticated(r) {
+			app.sessionManager.Put(r.Context(), "PathBeforeLogin", r.URL.Path)
 			http.Redirect(w, r, "/user/login", http.StatusSeeOther)
 			return
 		}
+		w.Header().Add("Cache-Control", "no-store")
 		next.ServeHTTP(w, r)
 	})
 }
 func (app *application) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		exist := app.session.Exists(r, "userID")
-		if !exist {
+
+		id := app.sessionManager.GetInt(r.Context(), "authenticateUserID")
+		if id == 0 {
 			next.ServeHTTP(w, r)
 			return
 		}
-		user, err := app.users.Get(app.session.GetInt(r, "userID"))
+		// Otherwise, we check to see if a user with that ID exists in our
+		// database.
+		exists, err := app.users.Exists(id)
 		if err != nil {
-			if err == models.ErrNoRecord {
-				app.session.Remove(r, "userID")
-				next.ServeHTTP(w, r)
-				return
-			}
 			app.serverError(w, err)
 			return
 		}
-		ctx := context.WithValue(r.Context(), ContextKeyUser, user)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		// If a matching user is found, we know we know that the request is
+		// coming from an authenticated user who exists in our database. We
+		// create a new copy of the request (with an isAuthenticatedContextKey
+		// value of true in the request context) and assign it to r.
+		if exists {
+			ctx := context.WithValue(r.Context(), isAuthenticatedContextKey, true)
+			r = r.WithContext(ctx)
+		}
+		// Call the next handler in the chain.
+		next.ServeHTTP(w, r)
 	})
 }
 

@@ -11,29 +11,30 @@ import (
 	"os"
 	"time"
 
+	"github.com/alexedwards/scs/mysqlstore"
+	"github.com/alexedwards/scs/v2"
+	"github.com/go-playground/form/v4"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/golangcollege/sessions"
-	"github.com/xyedo/snippetbox/pkg/models/mysql"
+	"github.com/xyedo/snippetbox/internal/models"
 )
 
-type ContextKey string
-
-var ContextKeyUser = ContextKey("user")
-
 type application struct {
-	errorLog      *log.Logger
-	infoLog       *log.Logger
-	session       *sessions.Session
-	snippets      *mysql.SnippetModel
-	users         *mysql.UserModel
+	debug          bool
+	errorLog       *log.Logger
+	infoLog        *log.Logger
+	sessionManager *scs.SessionManager
+	snippets       models.SnippetModelInterface
+	users          models.UserModelInterface
+
 	templateCache map[string]*template.Template
+	formDecoder   *form.Decoder
 }
 
 func main() {
 	addr := flag.String("addr", ":4000", "HTTP network address")
 	// dsn := flag.String("dsn", "web:pass@/snippetbox?parseTime=true", "mySQL databases")
 	pass := flag.String("passDB", "web:pass@/snippetbox?parseTime=true", "MYSQL DB Password for user:web\n for parsing web:{pass}@/snippetbox?parseTime=true")
-	secret := flag.String("secret", "K/2TiTnFoRJWpHM3sksO5i6zpmJ9ryczujFwVjiy5Tk=", "Secret Key For Session")
+	debug := flag.Bool("debug", false, "debug mode")
 	flag.Parse()
 	dsn := fmt.Sprintf("web:%s@/snippetbox?parseTime=true", *pass)
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
@@ -44,24 +45,27 @@ func main() {
 	}
 	defer db.Close()
 
-	templateCache, err := newTemplateCache("../../ui/html/")
+	templateCache, err := newTemplateCache()
 	if err != nil {
 		errorLog.Fatal(err)
 	}
-	session := sessions.New([]byte(*secret))
-	session.Lifetime = 12 * time.Hour
-	session.Secure = true
+	formDecoder := form.NewDecoder()
+	sessionManager := scs.New()
+	sessionManager.Store = mysqlstore.New(db)
+	sessionManager.Lifetime = 12 * time.Hour
 	app := &application{
-		infoLog:  infoLog,
-		errorLog: errorLog,
-		session:  session,
-		snippets: &mysql.SnippetModel{
+		debug:          *debug,
+		infoLog:        infoLog,
+		errorLog:       errorLog,
+		sessionManager: sessionManager,
+		snippets: &models.SnippetModel{
 			DB: db,
 		},
-		users: &mysql.UserModel{
+		users: &models.UserModel{
 			DB: db,
 		},
 		templateCache: templateCache,
+		formDecoder:   formDecoder,
 	}
 	tlsConfig := &tls.Config{
 		PreferServerCipherSuites: true,
@@ -78,7 +82,7 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 	infoLog.Printf("starting server on %s\n", *addr)
-	err = srv.ListenAndServeTLS("../../tls/cert.pem", "../../tls/key.pem")
+	err = srv.ListenAndServeTLS("./tls/cert.pem", "./tls/key.pem")
 	if err != nil {
 		errorLog.Fatal(err)
 	}
