@@ -16,6 +16,10 @@ import (
 	"github.com/xyedo/snippetbox/pkg/models/mysql"
 )
 
+type ContextKey string
+
+var ContextKeyUser = ContextKey("user")
+
 type application struct {
 	errorLog      *log.Logger
 	infoLog       *log.Logger

@@ -9,9 +9,9 @@ import (
 func (app *application) routes() http.Handler {
 	mux := pat.New()
 	dynamicmiddleware := func(fun http.Handler) http.Handler {
-		return app.session.Enable(NoSurf(fun))
+		return app.session.Enable(NoSurf(app.authenticate(fun)))
 	}
-	mux.Get("/", app.session.Enable(http.HandlerFunc(app.home)))
+	mux.Get("/", dynamicmiddleware(http.HandlerFunc(app.home)))
 	mux.Get("/snippet/create", dynamicmiddleware(app.requireAuthUser(http.HandlerFunc(app.createSnippetForm))))
 	mux.Post("/snippet/create", dynamicmiddleware(app.requireAuthUser(http.HandlerFunc(app.createSnippet))))
 	mux.Get("/snippet/:id", dynamicmiddleware(http.HandlerFunc(app.showSnippet)))

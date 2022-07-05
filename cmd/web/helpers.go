@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/justinas/nosurf"
+	"github.com/xyedo/snippetbox/pkg/models"
 )
 
 func (app *application) addDefaultData(td *templateData, r *http.Request) *templateData {
@@ -48,6 +49,10 @@ func (app *application) clientError(w http.ResponseWriter, status int) {
 func (app *application) notFound(w http.ResponseWriter) {
 	app.clientError(w, http.StatusNotFound)
 }
-func (app *application) authenticatedUser(r *http.Request) int {
-	return app.session.GetInt(r, "userID")
+func (app *application) authenticatedUser(r *http.Request) *models.User {
+	ret, ok := r.Context().Value(ContextKeyUser).(*models.User)
+	if !ok {
+		return nil
+	}
+	return ret
 }
