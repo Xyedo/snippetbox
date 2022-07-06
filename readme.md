@@ -20,7 +20,7 @@
 - [x] more http e2e testing
 - [x] add Account page to the app
 - [x] Redirect appropriately after login
-- [ ] Implement Change Password Features 
+- [x] Implement Change Password Features 
 
 
 

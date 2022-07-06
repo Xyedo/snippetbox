@@ -212,14 +212,14 @@ func (app *application) aboutView(w http.ResponseWriter, r *http.Request) {
 func (app *application) accountView(w http.ResponseWriter, r *http.Request) {
 	id := app.sessionManager.GetInt(r.Context(), "authenticateUserID")
 	if id == 0 {
-		http.Redirect(w, r, "/user/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/user/login", http.StatusUnauthorized)
 		return
 	}
 	user, err := app.users.Get(id)
 	if err != nil {
 		if errors.Is(err, models.ErrNoRecord) {
 			app.sessionManager.Remove(r.Context(), "authenticateUserID")
-			http.Redirect(w, r, "/user/login", http.StatusSeeOther)
+			http.Redirect(w, r, "/user/login", http.StatusUnauthorized)
 			return
 		}
 		app.serverError(w, err)
@@ -228,4 +228,59 @@ func (app *application) accountView(w http.ResponseWriter, r *http.Request) {
 	data := app.newTemplateData(r)
 	data.User = user
 	app.render(w, http.StatusOK, "account.tmpl", data)
+}
+
+type updatePasswordPost struct {
+	CurrentPassword     string `form:"currentPassword"`
+	NewPassword         string `form:"newPassword"`
+	NewPasswordConfirm  string `form:"newPasswordConfirmation"`
+	validator.Validator `form:"-"`
+}
+
+func (app *application) updatePasswordView(w http.ResponseWriter, r *http.Request) {
+	data := app.newTemplateData(r)
+	data.Form = updatePasswordPost{}
+	app.render(w, http.StatusOK, "password.tmpl", data)
+}
+
+func (app *application) updatePasswordPost(w http.ResponseWriter, r *http.Request) {
+	var form updatePasswordPost
+	app.decodePostForm(r, &form)
+	form.CheckField(validator.NotBlank(form.CurrentPassword), "currentPassword", "This field cannot be blank")
+	form.CheckField(validator.NotBlank(form.NewPassword), "newPassword", "This field cannot be blank")
+	form.CheckField(validator.NotBlank(form.NewPasswordConfirm), "newPasswordConfirmation", "This field cannot be blank")
+	form.CheckField(validator.MinChars(form.NewPassword, 8), "newPassword", "This field must be at least 8 characters long")
+	form.CheckField(form.NewPassword == form.NewPasswordConfirm, "newPasswordConfirmation", "new Password do not match")
+
+	if !form.Valid() {
+		data := app.newTemplateData(r)
+		data.Form = form
+		app.render(w, http.StatusUnprocessableEntity, "password.tmpl", data)
+		return
+	}
+
+	id := app.sessionManager.GetInt(r.Context(), "authenticateUserID")
+	if id == 0 {
+		app.sessionManager.Remove(r.Context(), "authenticateUserID")
+		http.Redirect(w, r, "/user/login", http.StatusUnauthorized)
+		return
+	}
+	err := app.users.PasswordUpdate(id, form.CurrentPassword, form.NewPassword)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			app.sessionManager.Remove(r.Context(), "authenticateUserID")
+			http.Redirect(w, r, "/user/login", http.StatusUnauthorized)
+
+		} else if errors.Is(err, models.ErrInvalidCredentials) {
+			form.AddFieldError("currentPassword", "Current password is incorrect")
+			data := app.newTemplateData(r)
+			data.Form = form
+			app.render(w, http.StatusUnprocessableEntity, "password.tmpl", data)
+		} else {
+			app.serverError(w, err)
+		}
+		return
+	}
+	app.sessionManager.Put(r.Context(), "flash", "Your password has been updated!")
+	http.Redirect(w, r, "/account/view", http.StatusSeeOther)
 }

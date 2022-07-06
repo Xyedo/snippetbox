@@ -29,9 +29,12 @@ func (app *application) routes() http.Handler {
 	protected := func(fun http.Handler) http.Handler {
 		return dynamicmiddleware(app.requireAuth(fun))
 	}
+	router.Handler(http.MethodGet, "/account/view", protected(http.HandlerFunc(app.accountView)))
+	router.Handler(http.MethodGet, "/account/password/update", protected(http.HandlerFunc(app.updatePasswordView)))
+	router.Handler(http.MethodPost, "/account/password/update", protected(http.HandlerFunc(app.updatePasswordPost)))
+
 	router.Handler(http.MethodGet, "/snippet/create", protected(http.HandlerFunc(app.snippetCreateView)))
 	router.Handler(http.MethodPost, "/snippet/create", protected(http.HandlerFunc(app.createSnippetPost)))
-	router.Handler(http.MethodGet, "/account/view", protected(http.HandlerFunc(app.accountView)))
 	router.Handler(http.MethodPost, "/user/logout", protected(http.HandlerFunc(app.logoutUserPost)))
 	router.Handler(http.MethodGet, "/ping", http.HandlerFunc(ping))
 
