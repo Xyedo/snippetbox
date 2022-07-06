@@ -74,7 +74,7 @@ go run /usr/local/go/src/crypto/tls/generate_cert.go --rsa-bits=2048 --host=lslo
 ## Running the Project
 you can run the project by :
 ```
-go run ./cmd/web
+go run ./cmd/web #Check https://localhost:4000 for the web
 ```
 
 you can run the test by :
