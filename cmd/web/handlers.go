@@ -250,7 +250,7 @@ func (app *application) updatePasswordPost(w http.ResponseWriter, r *http.Reques
 	form.CheckField(validator.NotBlank(form.NewPassword), "newPassword", "This field cannot be blank")
 	form.CheckField(validator.NotBlank(form.NewPasswordConfirm), "newPasswordConfirmation", "This field cannot be blank")
 	form.CheckField(validator.MinChars(form.NewPassword, 8), "newPassword", "This field must be at least 8 characters long")
-	form.CheckField(form.NewPassword == form.NewPasswordConfirm, "newPasswordConfirmation", "new Password do not match")
+	form.CheckField(form.NewPassword == form.NewPasswordConfirm, "newPasswordConfirmation", "New Password do not match")
 
 	if !form.Valid() {
 		data := app.newTemplateData(r)
