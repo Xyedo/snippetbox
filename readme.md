@@ -1,6 +1,6 @@
 <h1>My Snippetbox implementation From <a href ="https://lets-go-further.alexedwards.net/">Lets Go<a> Book</h1>
 
-### Using Go 1.18 ![check-code-coverage](https://img.shields.io/badge/coverage-72%25-yellow)
+### Using Go 1.18 ![check-code-coverage](https://img.shields.io/badge/coverage-72%25-orange)
 
 <h2>My Change</h2>
 <ul>
