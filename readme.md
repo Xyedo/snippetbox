@@ -36,7 +36,7 @@
 
   1. Having MySQL install
   2. creating new user, snippetbox db, users table, and snippets table
-  ```
+  ```sql
   mysql -u root -p
   #enter your password
   
@@ -72,7 +72,7 @@
 You can install the project by forking or cloning
 You need to add s self-signed TLS certificate
 
-```
+```bash
 mkdir project_path/tls
 cd project_path/tls
 go run /usr/local/go/src/crypto/tls/generate_cert.go --rsa-bits=2048 --host=lslocalhost
@@ -80,18 +80,18 @@ go run /usr/local/go/src/crypto/tls/generate_cert.go --rsa-bits=2048 --host=lslo
 
 ## Running the Project
 you can run the project by :
-```
+```bash
 go run ./cmd/web #Check https://localhost:4000 for the web
 ```
 
 you can run the test by :
 
-```
+```bash
 go test -v ./...
 ```
 you can run the coverage by :
 
-```
+```bash
 go test -cover ./...
 ```
 
